@@ -1,0 +1,3 @@
+-r default.txt
+coverage>=3.7.1
+coveralls>=0.4.2

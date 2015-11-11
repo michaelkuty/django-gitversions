@@ -1,0 +1,34 @@
+language: python
+sudo: true
+python:
+  - 2.7
+  - 3.5
+env:
+  matrix:
+   - DJANGO_REQUIREMENT="Django>=1.8,<1.9"
+   - DJANGO_REQUIREMENT="Django>=1.7,<1.8"
+   - DB=mysql
+   - DB=postgres
+   - DB=sqlite
+before_install:
+  - sudo apt-get install build-essential libssl-dev libffi-dev python-dev -y
+install:
+  - pip install -q $DJANGO_REQUIREMENT django-mptt Pillow feedparser flake8
+  - pip install -r requirements/tests.txt
+  - python setup.py -q install
+  - if [[ $DB == mysql ]]; then pip install -q mysql-python; fi
+  - if [[ $DB == postgres ]]; then pip install -q psycopg2; fi
+before_script:
+  - mysql -e 'create database django_leonardo;'
+  - psql -c 'create database django_leonardo;' -U postgres
+script:
+  - cd tests
+  - coverage run manage.py test testapp
+after_success:
+  - coveralls
+branches:
+  only:
+    - master
+matrix:
+  allow_failures:
+    - python: 3.5

@@ -1,0 +1,5 @@
+include MANIFEST.in
+include README.rst
+recursive-include django_gitversions/static *
+recursive-include django_gitversions/locale *
+recursive-include django_gitversions/templates *

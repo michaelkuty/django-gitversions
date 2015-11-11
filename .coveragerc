@@ -1,0 +1,5 @@
+[run]
+source = django_gitversions
+omit =
+    *migrations*
+    django_gitversions/__init__.py

@@ -1,13 +1,12 @@
 
-import errno
-import os
 from collections import OrderedDict
-
+from datetime import datetime
 from django.apps import apps
 from django.core import serializers
 from django.core.management.base import BaseCommand, CommandError
-from django.db import DEFAULT_DB_ALIAS, router
+from django.db import DEFAULT_DB_ALIAS
 from django_gitversions import versioner
+from django_gitversions.utils import get_queryset
 
 
 class Command(BaseCommand):
@@ -36,16 +35,19 @@ class Command(BaseCommand):
         parser.add_argument('-a', '--all', action='store_true', dest='use_base_manager', default=False,
                             help="Use Django's base manager to dump all models stored in the database, "
                             "including those that would otherwise be filtered or modified by a custom manager.")
-        parser.add_argument('--pks', dest='primary_keys',
-                            help="Only dump objects with given primary keys. "
-                            "Accepts a comma separated list of keys. "
-                            "This option will only work when you specify one model.")
         parser.add_argument('-o', '--output', default=None, dest='output',
                             help='Specifies file to which the output is written.')
+
+        parser.add_argument('-c', '--commit', action='store_true', dest='use_base_manager', default=None,
+                            help='Commit changes after complete dump.')
+        parser.add_argument('-p', '--push', action='store_true', dest='use_base_manager', default=None,
+                            help='Push to remote after complete dump.')
 
     def handle(self, *app_labels, **options):
         format = options.get('format', 'xml')
         indent = options.get('indent', 4)
+        push = options.get('push', False)
+        commit = options.get('commit', False)
         using = options.get('database')
         excludes = options.get('exclude', [])
         use_natural_keys = options.get('use_natural_keys', True)
@@ -141,16 +143,35 @@ class Command(BaseCommand):
 
         # get all model classes
 
+        models = 0
+        instances = 0
+
         for model in sort_dependencies(app_list.items()):
+
+            models += 1
 
             # get all objects
             queryset = get_queryset(
                 model, using, primary_keys, use_base_manager)
 
-            versioner.handle(queryset, model=model, format=format, **{'indent': indent,
-                                                                      'use_natural_foreign_keys': use_natural_foreign_keys,
-                                                                      'use_natural_primary_keys': use_natural_primary_keys,
-                                                                      })
+            versioner.handle(queryset,
+                             model=model,
+                             format=format,
+                             autocommit=False,
+                             **{'indent': indent,
+                                 'use_natural_foreign_keys': use_natural_foreign_keys,
+                                'use_natural_primary_keys': use_natural_primary_keys,
+                                })
+            instances += queryset.count()
+
+        self.stdout.write('Dumped {} applications, {} models and {} instances.'.format(
+            len(app_list), models, instances))
+
+        # commit & push to remote
+        if commit or push:
+            self.stdout.write('Commit & Push ...')
+            versioner.backend.commit(
+                'Initial versions from: {}'.format(datetime.now()), push=push)
 
 
 def sort_dependencies(app_list):
@@ -226,28 +247,3 @@ def sort_dependencies(app_list):
         model_dependencies = skipped
 
     return model_list
-
-
-def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
-
-
-def get_queryset(model, using, primary_keys, use_base_manager):
-
-    # get all objects
-    if not model._meta.proxy and router.allow_migrate(using, model):
-        if use_base_manager:
-            objects = model._base_manager
-        else:
-            objects = model._default_manager
-
-        queryset = objects.using(using).order_by(model._meta.pk.name)
-        if primary_keys:
-            queryset = queryset.filter(pk__in=primary_keys)
-    return queryset

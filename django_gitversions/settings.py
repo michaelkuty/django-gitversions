@@ -1,0 +1,5 @@
+
+GITVERSIONS_IGNORED_APPS = ['sessions', 'admin']
+GITVERSIONS_IGNORED_MODELS = ['constance']
+
+GITVERSIONS_VERSIONED_MODELS = ['Page']

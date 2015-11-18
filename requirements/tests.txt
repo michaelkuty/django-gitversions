@@ -1,3 +1,4 @@
 -r default.txt
+django-leonardo>=1.0.0
 coverage>=3.7.1
 coveralls>=0.4.2

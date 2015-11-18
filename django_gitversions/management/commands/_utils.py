@@ -6,7 +6,6 @@ import os
 import warnings
 import zipfile
 from itertools import product
-
 from django.apps import apps
 from django.conf import settings
 from django.core import serializers
@@ -23,6 +22,9 @@ from django.utils._os import upath
 from django.utils.deprecation import RemovedInDjango19Warning
 from django.utils.encoding import force_text
 from django.utils.functional import cached_property
+from django.db.models.signals import post_save
+from django_gitversions.signals import gitversion
+from django_gitversions.backends.git import GitBackend
 
 try:
     import bz2
@@ -76,8 +78,6 @@ class Command(BaseCommand):
                             "path of at least one fixture in the command line.")
 
     def add_arguments(self, parser):
-        parser.add_argument('args', metavar='fixture', nargs='+',
-                            help='Fixture labels.')
         parser.add_argument('--database', action='store', dest='database',
                             default=DEFAULT_DB_ALIAS, help='Nominates a specific database to load '
                             'fixtures into. Defaults to the "default" database.')
@@ -87,14 +87,22 @@ class Command(BaseCommand):
                             dest='ignore', default=False,
                             help='Ignores entries in the serialized data for fields that do not '
                             'currently exist on the model.')
+        parser.add_argument('--url', default=False, dest='url',
+                            help='Remote url for restore.')
 
     def handle(self, *fixture_labels, **options):
 
         self.ignore = options.get('ignore')
         self.using = options.get('database')
+        self.url = options.get('url')
         self.app_label = options.get('app_label')
         self.hide_empty = options.get('hide_empty', False)
         self.verbosity = options.get('verbosity')
+
+        if self.url:
+            # inicialize local backup repository
+            self.stdout.write('Clonning initial data from {}'.format(self.url))
+            GitBackend(url=self.url).repo
 
         total = get_all_fixtures()
         unloaded = total
@@ -104,9 +112,12 @@ class Command(BaseCommand):
         really_skiped = []
         objects = []
 
+        post_save.disconnect(gitversion)
+
+        connection = connections[self.using]
+
         i = 0
         while len(unloaded) > 0:
-            connection = connections[self.using]
 
             try:
                 with transaction.atomic(using=self.using) and connection.constraint_checks_disabled():
@@ -129,7 +140,8 @@ class Command(BaseCommand):
             connection = connections[self.using]
 
             with transaction.atomic(using=self.using) and connection.constraint_checks_disabled():
-                skiped, _processed, _really_skiped, _objects, missing_fks = self.loaddata(skiped)
+                skiped, _processed, _really_skiped, _objects, missing_fks = self.loaddata(
+                    skiped)
                 processed += _processed
                 really_skiped += _really_skiped
                 objects += _objects
@@ -148,6 +160,8 @@ class Command(BaseCommand):
         # can return incorrect results. See Django #7572, MySQL #37735.
         if transaction.get_autocommit(self.using):
             connections[self.using].close()
+
+        post_save.connect(gitversion)
 
     def loaddata(self, fixture_labels):
         connection = connections[self.using]
@@ -188,7 +202,7 @@ class Command(BaseCommand):
                 with open(path, 'r') as fixture_file:
                     self.fixture_count += 1
                     try:
-                        data = fixture_file
+                        data = fixture_file.read()
                         objects = serializers.deserialize('json', data,
                                                           using=self.using, ignorenonexistent=self.ignore)
                         # evaluate
@@ -222,17 +236,17 @@ class Command(BaseCommand):
 
         # Since we disabled constraint checks, we must manually check for
         # any invalid keys that might have been added
-        table_names=[model._meta.db_table for model in self.models]
+        table_names = [model._meta.db_table for model in self.models]
         try:
-            connection.check_constraints(table_names = table_names)
+            connection.check_constraints(table_names=table_names)
         except Exception as e:
-            e.args=("Problem installing fixtures: %s" % e,)
+            e.args = ("Problem installing fixtures: %s" % e,)
             raise
 
         # If we found even one object in a fixture, we need to reset the
         # database sequences.
         if self.loaded_object_count > 0:
-            sequence_sql=connection.ops.sequence_reset_sql(
+            sequence_sql = connection.ops.sequence_reset_sql(
                 no_style(), self.models)
             if sequence_sql:
                 if self.verbosity >= 2:
@@ -256,20 +270,20 @@ class Command(BaseCommand):
         Loads fixtures files for a given label.
         """
         for fixture_file, fixture_dir, fixture_name in self.find_fixtures(fixture_label):
-            _, ser_fmt, cmp_fmt=self.parse_name(
+            _, ser_fmt, cmp_fmt = self.parse_name(
                 os.path.basename(fixture_file))
-            open_method, mode=self.compression_formats[cmp_fmt]
-            fixture=open_method(fixture_file, mode)
+            open_method, mode = self.compression_formats[cmp_fmt]
+            fixture = open_method(fixture_file, mode)
             try:
                 self.fixture_count += 1
-                objects_in_fixture=0
-                loaded_objects_in_fixture=0
+                objects_in_fixture = 0
+                loaded_objects_in_fixture = 0
                 if self.verbosity >= 2:
                     self.stdout.write("Installing %s fixture '%s' from %s." %
                                       (ser_fmt, fixture_name, humanize(fixture_dir)))
 
-                objects=serializers.deserialize(ser_fmt, fixture,
-                                                  using = self.using, ignorenonexistent = self.ignore)
+                objects = serializers.deserialize(ser_fmt, fixture,
+                                                  using=self.using, ignorenonexistent=self.ignore)
 
                 for obj in objects:
                     objects_in_fixture += 1
@@ -277,9 +291,9 @@ class Command(BaseCommand):
                         loaded_objects_in_fixture += 1
                         self.models.add(obj.object.__class__)
                         try:
-                            obj.save(using = self.using)
+                            obj.save(using=self.using)
                         except (DatabaseError, IntegrityError) as e:
-                            e.args=("Could not load %(app_label)s.%(object_name)s(pk=%(pk)s): %(error_msg)s" % {
+                            e.args = ("Could not load %(app_label)s.%(object_name)s(pk=%(pk)s): %(error_msg)s" % {
                                 'app_label': obj.object._meta.app_label,
                                 'object_name': obj.object._meta.object_name,
                                 'pk': obj.object.pk,
@@ -291,7 +305,7 @@ class Command(BaseCommand):
                 self.fixture_object_count += objects_in_fixture
             except Exception as e:
                 if not isinstance(e, CommandError):
-                    e.args=("Problem installing fixture '%s': %s" % (
+                    e.args = ("Problem installing fixture '%s': %s" % (
                         fixture_file, e),)
                 raise
             finally:

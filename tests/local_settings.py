@@ -62,7 +62,7 @@ USE_TZ = True
 ROOT_URLCONF = 'testapp.urls'
 LANGUAGES = (('en', 'English'), ('cs', 'Czech'))
 
-LEONARDO_MODULE_AUTO_INCLUDE = False
+DEFAULT_DB_ALIAS = 'default'
 
 APPS = [
     'django_gitversions',

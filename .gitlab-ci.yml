@@ -9,3 +9,12 @@ sqlite:
 
   tags:
   - sqlite
+
+pgsql:
+  script:
+  - sudo apt-get install build-essential libssl-dev libffi-dev python-dev python-psycopg2 -y
+  - pip install tox psycopg2==2.6.1
+  - psql -c 'create database django_leonardo;' -U postgres
+
+  tags:
+  - postgres

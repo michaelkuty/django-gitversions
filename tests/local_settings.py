@@ -1,6 +1,5 @@
 from __future__ import absolute_import, unicode_literals
 
-import sys
 import os
 
 SITE_ID = 1
@@ -63,6 +62,13 @@ ROOT_URLCONF = 'testapp.urls'
 LANGUAGES = (('en', 'English'), ('cs', 'Czech'))
 
 DEFAULT_DB_ALIAS = 'default'
+
+
+GITVERSIONS_ROOT_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'repo')
+GITVERSIONS_AUTO_SYNC = False
+
+GITVERSIONS_REPO_URL = 'https://gitlab.com/michaelkuty/test-backup.git'
 
 APPS = [
     'django_gitversions',

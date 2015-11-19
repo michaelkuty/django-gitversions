@@ -25,6 +25,7 @@ from django.utils.functional import cached_property
 from django.db.models.signals import post_save
 from django_gitversions.signals import gitversion
 from django_gitversions.backends.git import GitBackend
+from django_gitversions import versioner
 
 try:
     import bz2
@@ -99,7 +100,7 @@ class Command(BaseCommand):
 
         if self.url:
             # inicialize local backup repository
-            self.stdout.write('Clonning initial data from {}'.format(self.url))
+            self.stdout.write('Clonning initial data from {} into {}'.format(self.url, versioner.path))
             GitBackend(url=self.url).repo
 
         total = get_all_fixtures()

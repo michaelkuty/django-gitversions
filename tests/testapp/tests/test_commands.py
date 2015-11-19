@@ -1,24 +1,33 @@
 
 from __future__ import absolute_import, unicode_literals
 
+from django.conf import settings
 from django.core import management
 from django.test import TestCase
-from leonardo.models import Page
 from django_gitversions import versioner
+from leonardo.models import Page
 
 
 class CommandTest(TestCase):
 
     def setUp(self):
         '''Make DB strcture'''
+
         management.call_command('makemigrations',
                                 interactive=False)
         management.call_command('migrate',
                                 interactive=False)
 
+    def test_settings(self):
+
+        self.assertEqual(versioner.autosync, False)
+        self.assertEqual(versioner.autocommit, False)
+        self.assertEqual(versioner.autopush, False)
+        self.assertEqual(str(versioner.url), str(settings.GITVERSIONS_REPO_URL))
+
     def test_01_gitrestore_remote(self):
-        management.call_command('gitrestore',
-                                url='https://gitlab.com/michaelkuty/test-backup.git')
+
+        management.call_command('gitrestore')
 
         self.assertEqual(Page.objects.exists(), True)
 
@@ -47,8 +56,22 @@ class CommandTest(TestCase):
 
     def test_04_versioner(self):
 
+        # remove local files
+        #versioner.backend.destroy()
+
+        management.call_command('gitversions',
+                                format='json',
+                                indent=4)
+
+        # check local uncomited changes
         self.assertEqual(versioner.backend.check(), True)
 
         versioner.backend.commit('Initial Commit')
 
         self.assertEqual(versioner.backend.check(), False)
+
+        # cleanup
+
+    def tearDown(self):
+        #versioner.backend.destroy()
+        pass

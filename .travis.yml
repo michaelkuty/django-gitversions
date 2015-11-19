@@ -6,7 +6,7 @@ python:
 env:
   matrix:
    - DJANGO_REQUIREMENT="Django>=1.8,<1.9"
-   - DJANGO_REQUIREMENT="Django>=1.7,<1.8"
+   - DJANGO_REQUIREMENT="Django>=1.9,<1.10"
    - DB=mysql
    - DB=postgres
    - DB=sqlite

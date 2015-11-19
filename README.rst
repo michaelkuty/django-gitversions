@@ -40,6 +40,12 @@ Example
     Clonning initial data from git@gitlab.com:michaelkuty/test-backup.git
     Loaded 2498 instances and 0 was skipped from total 2498 in 12 loaddata iterations and 25 saving iterations.
 
+Requires
+--------
+
+* Django 1.8 +
+* PythonGit
+
 Installation
 ------------
 

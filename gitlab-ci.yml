@@ -1,0 +1,11 @@
+# This is core test runner
+before_script:
+  - sudo apt-get install build-essential libssl-dev libffi-dev python-dev -y
+  - pip install tox
+
+sqlite:
+  script:
+  - tox
+
+  tags:
+  - sqlite

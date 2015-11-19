@@ -1,4 +1,4 @@
--r default.txt
+GitPython==1.0.1
 django-leonardo>=1.0.0
 coverage>=3.7.1
 coveralls>=0.4.2

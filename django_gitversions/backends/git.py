@@ -83,7 +83,7 @@ class GitBackend(Backend):
             return False
 
         author = Actor(
-            "An author" if not user else str(user),
+            "GitVersioner" if not user else str(user),
             "author@example.com" if not user else str(user.mail),
         )
         committer = author
@@ -114,3 +114,12 @@ class GitBackend(Backend):
     def reset(self):
         '''Reset changes'''
         self.repo.reset()
+
+    def destroy(self, fail_silently=True):
+        '''remove all'''
+        import shutil
+        try:
+            shutil.rmtree(self.path)
+        except Exception as e:
+            if not fail_silently:
+                raise e

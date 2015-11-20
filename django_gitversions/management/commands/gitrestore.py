@@ -110,6 +110,7 @@ class Command(BaseCommand):
         skiped = []
         really_skiped = []
         objects = []
+        missing_fks = []
 
         post_save.disconnect(gitversion)
 

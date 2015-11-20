@@ -79,4 +79,14 @@ def get_queryset(model, using, primary_keys, use_base_manager):
         queryset = objects.using(using).order_by(model._meta.pk.name)
         if primary_keys:
             queryset = queryset.filter(pk__in=primary_keys)
+        return queryset
+
+    if use_base_manager:
+        objects = model._base_manager
+    else:
+        objects = model._default_manager
+
+    queryset = objects.using(using).order_by(model._meta.pk.name)
+    if primary_keys:
+        queryset = queryset.filter(pk__in=primary_keys)
     return queryset

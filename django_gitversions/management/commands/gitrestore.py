@@ -34,17 +34,6 @@ except ImportError:
     has_bz2 = False
 
 
-def get_all_fixtures():
-
-    fixtures = []
-
-    for app_path in glob.glob("/srv/leonardo/sites/leonardo/backup/*"):
-        for model_path in glob.glob(app_path + '/*'):
-            for instance_path in glob.glob(model_path + '/*.json'):
-                fixtures.append(instance_path)
-    return fixtures
-
-
 def save_all(objects, using, iterations=0, stdout=None):
     '''Tries recursively saves all objects'''
 
@@ -103,7 +92,7 @@ class Command(BaseCommand):
             self.stdout.write('Clonning initial data from {} into {}'.format(self.url, versioner.path))
             GitBackend(url=self.url).repo
 
-        total = get_all_fixtures()
+        total = versioner.get_all_fixtures()
         unloaded = total
         count_total = len(total)
         processed = []
@@ -117,6 +106,7 @@ class Command(BaseCommand):
         connection = connections[self.using]
 
         i = 0
+
         while len(unloaded) > 0:
 
             try:

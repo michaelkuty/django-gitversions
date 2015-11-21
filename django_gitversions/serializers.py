@@ -28,11 +28,6 @@ class VersionSerializer(Serializer):
             self._current.pop(field.name, None)
             return
 
-        # pop fields starts with underscore (private)
-        if field.name.startswith('_'):
-            self._current.pop(field.name, None)
-            return
-
         super(VersionSerializer, self).handle_field(obj, field)
 
     @classmethod

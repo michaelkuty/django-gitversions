@@ -1,6 +1,6 @@
 
 import os
-
+import glob
 from django.conf import settings
 from django_gitversions.serializers import VersionSerializer
 from .utils import LazyConfig, mkdir_p
@@ -87,3 +87,15 @@ class Versioner(LazyConfig):
                                         user=user)
                 except Exception as e:
                     raise e
+
+    def get_all_fixtures(self):
+        '''returns all paths
+        TODO: properly join paths for globing
+        '''
+        fixtures = []
+
+        for app_path in glob.glob(self.path + "/*"):
+            for model_path in glob.glob(app_path + '/*'):
+                for instance_path in glob.glob(model_path + '/*.json'):
+                    fixtures.append(instance_path)
+        return fixtures

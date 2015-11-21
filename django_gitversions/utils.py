@@ -11,7 +11,7 @@ class LazyConfig(object):
     def autosync(self):
         '''dump all model changes synchronouslly ?
         '''
-        return getattr(settings, 'GITVERSIONS_AUTO_SYNC', True)
+        return getattr(settings, 'GITVERSIONS_AUTO_SYNC', False)
 
     @property
     def autocommit(self):

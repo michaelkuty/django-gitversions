@@ -1,15 +1,15 @@
 # This is core test runner
-before_script:
-  - pip install tox psycopg2==2.6.1
-  - psql -c 'create database django_leonardo;' -U postgres
-
-pgsql:
-  script:
-  - tox -e py27-django18
-  - tox -e py27-django19
-
-  tags:
-  - postgres
+#before_script:
+#  - pip install tox psycopg2==2.6.1
+#  - psql -c 'create database django_leonardo;' -U postgres
+#
+#pgsql:
+#  script:
+#  - tox -e py27-django18
+#  - tox -e py27-django19
+#
+#  tags:
+#  - postgres
 
 sqlite:
   script:

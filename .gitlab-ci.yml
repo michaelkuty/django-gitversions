@@ -1,7 +1,7 @@
 # This is core test runner
-#before_script:
-#  - pip install tox psycopg2==2.6.1
-#  - psql -c 'create database django_leonardo;' -U postgres
+before_script:
+  - apt-get install python-pip python-virtualenv python-memcache python-imaging python-docutils python-simplejson python-tz python-pygraphviz python-dev gettext libpq-dev libffi-dev libjpeg-dev -y
+  - pip install tox
 #
 #pgsql:
 #  script:

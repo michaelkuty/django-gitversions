@@ -5,7 +5,16 @@ before_script:
 
 pgsql:
   script:
-  - tox
+  - tox -e py27-django18
+  - tox -e py27-django19
 
   tags:
   - postgres
+
+sqlite:
+  script:
+  - tox -e py27-django18
+  - tox -e py27-django19
+
+  tags:
+  - sqlite

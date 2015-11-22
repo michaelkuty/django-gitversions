@@ -8,6 +8,12 @@ from django.db import router
 class LazyConfig(object):
 
     @property
+    def signal_enabled(self):
+        '''enable signal
+        '''
+        return getattr(settings, 'GITVERSIONS_SIGNAL_ENABLED', False)
+
+    @property
     def autosync(self):
         '''dump all model changes synchronouslly ?
         '''

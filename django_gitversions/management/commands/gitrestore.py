@@ -58,7 +58,7 @@ def save_all(objects, using, iterations=0, stdout=None, models=set()):
                 skiped.append(obj)
 
     if len(skiped) > 0:
-        return save_all(skiped, using, iterations + 1)
+        return save_all(skiped, using, iterations + 1, models=models)
 
     return iterations
 

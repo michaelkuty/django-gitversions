@@ -34,7 +34,7 @@ except ImportError:
     has_bz2 = False
 
 
-def save_all(objects, using, iterations=0, stdout=None):
+def save_all(objects, using, iterations=0, stdout=None, models=set()):
     '''Tries recursively saves all objects'''
 
     if len(objects) == 0 or iterations >= 25:
@@ -46,6 +46,7 @@ def save_all(objects, using, iterations=0, stdout=None):
         if router.allow_migrate_model(using, obj.object.__class__):
             try:
                 obj.save(using=using)
+                models.add(obj.object.__class__)
             except (DatabaseError, IntegrityError) as e:
                 e.args = ("Could not load %(app_label)s.%(object_name)s(pk=%(pk)s): %(error_msg)s" % {
                     'app_label': obj.object._meta.app_label,
@@ -100,6 +101,7 @@ class Command(BaseCommand):
         really_skiped = []
         objects = []
         missing_fks = []
+        models = set()
 
         post_save.disconnect(gitversion)
 
@@ -122,12 +124,11 @@ class Command(BaseCommand):
             i += 1
 
         with transaction.atomic(using=self.using) and connection.constraint_checks_disabled():
-            iterations = save_all(missing_fks, self.using)
-            iterations = save_all(objects, self.using)
+            iterations = save_all(missing_fks, self.using, models=models)
+            iterations = save_all(objects, self.using, models=models)
 
         # try again load some skiped objects
         while len(skiped) > 0:
-            connection = connections[self.using]
 
             with transaction.atomic(using=self.using) and connection.constraint_checks_disabled():
                 skiped, _processed, _really_skiped, _objects, missing_fks = self.loaddata(
@@ -140,17 +141,31 @@ class Command(BaseCommand):
 
         # also try save again
         with transaction.atomic(using=self.using) and connection.constraint_checks_disabled():
-            iterations = save_all(objects, self.using, iterations)
+            iterations = save_all(objects, self.using, iterations, models=models)
 
         self.stdout.write('Loaded %s instances and %s was skipped from total %s in %s loaddata iterations and %s saving iterations.' % (
             len(processed), len(really_skiped), count_total, i, iterations))
+
+        # If we found even one object in a fixture, we need to reset the
+        # database sequences.
+        if len(processed) > 0:
+            sequence_sql = connection.ops.sequence_reset_sql(
+                no_style(), models)
+            if sequence_sql:
+                if self.verbosity >= 2:
+                    self.stdout.write("Resetting sequences\n")
+                with connection.cursor() as cursor:
+                    for line in sequence_sql:
+                        cursor.execute(line)
+
         # Close the DB connection -- unless we're still in a transaction. This
         # is required as a workaround for an  edge case in MySQL: if the same
         # connection is used to create tables, load data, and query, the query
         # can return incorrect results. See Django #7572, MySQL #37735.
         if transaction.get_autocommit(self.using):
-            connections[self.using].close()
+            connection.close()
 
+        # connect gitversion hook
         post_save.connect(gitversion)
 
     def loaddata(self, fixture_labels):
@@ -197,6 +212,10 @@ class Command(BaseCommand):
                                                           using=self.using, ignorenonexistent=self.ignore)
                         # evaluate
                         objects = list(objects)
+
+                        # append to models
+                        if len(objects) > 0:
+                            self.models.add(objects[0].__class__)
 
                     except DeserializationError as ex:
                         skiped.append(path)

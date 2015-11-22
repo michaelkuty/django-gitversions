@@ -1,6 +1,7 @@
 
 from __future__ import absolute_import, unicode_literals
 
+from django.contrib.sites.models import Site
 from django.conf import settings
 from django.core import management
 from django.test import TestCase
@@ -71,6 +72,12 @@ class CommandTest(TestCase):
         self.assertEqual(versioner.backend.check(), False)
 
         # cleanup
+
+    def test_save_another(self):
+        # Regression for #17415
+        # On some backends the sequence needs reset after save with explicit ID.
+        # Test that there is no sequence collisions by saving another site.
+        Site(domain="example2.com", name="example2.com").save()
 
     def tearDown(self):
         #versioner.backend.destroy()

@@ -16,8 +16,8 @@ before_script:
 
 sqlite:
   script:
-  - tox -e py27-django18
-  - tox -e py27-django19
+  - export PBR_VERSION=1.2.3; tox -e py27-django18
+  - export PBR_VERSION=1.2.3; tox -e py27-django19
 
   tags:
   - sqlite
